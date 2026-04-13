@@ -8,6 +8,7 @@ import { PageHeader } from "../components/layout";
 import { Button } from "../components/ui/Button";
 import { Link } from "@tanstack/react-router";
 import type { PokemonFilters } from "../data/types";
+import { useAuth } from "../auth/AuthContext";
 
 const collectionSearchSchema = z.object({
   search: z.string().optional(),
@@ -77,6 +78,8 @@ function hasActiveFilters(search: CollectionSearch): boolean {
 function CollectionPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
+  const { isOwner, user } = useAuth();
+  const canEdit = !!user && isOwner;
   const apiFilters = useMemo(() => toApiFilters(search), [search]);
   const { data: pokemon = [], isLoading } = usePokemonList(apiFilters);
 
@@ -92,11 +95,13 @@ function CollectionPage() {
     <div>
       <PageHeader>
         <div className="flex items-center justify-end min-h-[38px]">
-          <Link to="/pokemon/new">
-            <Button type="button">
-              + Add Pokemon
-            </Button>
-          </Link>
+          {canEdit && (
+            <Link to="/pokemon/new">
+              <Button type="button">
+                + Add Pokemon
+              </Button>
+            </Link>
+          )}
         </div>
         <FilterBar />
       </PageHeader>

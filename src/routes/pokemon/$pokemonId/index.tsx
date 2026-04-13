@@ -9,6 +9,7 @@ import { DetailSection, DetailGrid, DetailField, LoadingSpinner, NotFound, PageH
 import { Button } from '../../../components/ui/Button';
 import { GAME_LOCATIONS } from '../../../data/constants';
 import { getSpeciesInfo, getShowdownSpriteUrl, getBallSpriteUrl } from '../../../data/pokemon-dex';
+import { useAuth } from '../../../auth/AuthContext';
 
 const pokemonIdParam = z.string().regex(/^[a-z0-9]{4}$/);
 
@@ -25,6 +26,8 @@ export const Route = createFileRoute('/pokemon/$pokemonId/')({
 function PokemonDetailPage() {
   const { pokemonId } = Route.useParams();
   const navigate = useNavigate();
+  const { user, isOwner } = useAuth();
+  const canEdit = !!user && isOwner;
   const { data: pokemon, isLoading, isError } = usePokemon(pokemonId);
   const deleteMutation = useDeletePokemon();
 
@@ -76,16 +79,18 @@ function PokemonDetailPage() {
           >
             &larr; Back to Collection
           </Link>
-          <div className="flex items-center gap-3">
-            <Button type="button" variant="danger" rank="secondary" onClick={handleDelete} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-            <Link to="/pokemon/$pokemonId/edit" params={{ pokemonId }}>
-              <Button type="button">
-                Edit
+          {canEdit && (
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="danger" rank="secondary" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </Button>
-            </Link>
-          </div>
+              <Link to="/pokemon/$pokemonId/edit" params={{ pokemonId }}>
+                <Button type="button">
+                  Edit
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
         <Card className="px-4 py-3">
           <PokemonPreview

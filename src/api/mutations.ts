@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { pokemonKeys } from './queryKeys';
-import { create, update, remove, loadCollection } from '../store/collection';
+import { create, update, remove, loadCollection, getById } from '../store/collection';
+import { addChange } from '../store/pendingChanges';
 import type { Pokemon, CreatePokemon, UpdatePokemon } from '../data/types';
 
 export function useCreatePokemon() {
@@ -9,7 +10,9 @@ export function useCreatePokemon() {
   return useMutation({
     mutationFn: async (data: CreatePokemon): Promise<Pokemon> => {
       await loadCollection();
-      return create(data);
+      const pokemon = create(data);
+      addChange({ type: 'add', pokemon });
+      return pokemon;
     },
     onSettled: () => {
       return Promise.all([
@@ -26,7 +29,10 @@ export function useUpdatePokemon() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdatePokemon }): Promise<Pokemon> => {
       await loadCollection();
-      return update(id, data);
+      const previous = getById(id);
+      const pokemon = update(id, data);
+      addChange({ type: 'update', pokemon, previous });
+      return pokemon;
     },
     onSettled: () => {
       return Promise.all([
@@ -43,7 +49,11 @@ export function useDeletePokemon() {
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
       await loadCollection();
+      const pokemon = getById(id);
       remove(id);
+      if (pokemon) {
+        addChange({ type: 'delete', pokemon });
+      }
     },
     onSettled: () => {
       return Promise.all([

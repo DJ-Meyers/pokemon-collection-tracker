@@ -44,7 +44,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   children,
   ...props
 }, ref) {
-  const base = "inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none";
+  const base = "inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const style = selected ? variantColors[variant].selected : variantColors[variant][rank];
   const classes = [base, style, className]
     .filter(Boolean)

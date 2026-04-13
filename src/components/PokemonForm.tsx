@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useStore } from '@tanstack/react-store';
 import type { Pokemon } from '../data/types';
@@ -7,7 +7,7 @@ import { useCreatePokemon, useUpdatePokemon } from '../api/mutations';
 import { NATURES, LANGUAGES, GENDERS, GAME_LOCATIONS } from '../data/constants';
 import { getSpeciesInfo, getShowdownSpriteUrl, getBallSpriteUrl, type SpeciesInfo } from '../data/pokemon-dex';
 import { Badge, BADGE_ICONS, OriginMarkBadge } from './ui/Badge';
-import { Card, useStickyOffset } from './layout';
+import { Card, PageHeader, useStickyOffset } from './layout';
 import { BallSelect } from './ui/form/BallSelect';
 import { LocationSelect } from './ui/form/LocationSelect';
 import { OriginSelect } from './ui/form/OriginSelect';
@@ -138,18 +138,6 @@ export function PokemonPreview({
   );
 }
 
-const FormHeader = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
-  function FormHeader({ children }, ref) {
-    const stickyOffset = useStickyOffset();
-    return (
-      <div ref={ref} className="sticky z-10 bg-gray-50 pb-2" style={{ top: stickyOffset }}>
-        <Card className="px-4 py-3">
-          {children}
-        </Card>
-      </div>
-    );
-  },
-);
 
 function buildDefaultValues(pokemon?: Pokemon): FormValues {
   return {
@@ -280,27 +268,7 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
     form.setFieldValue('is_hidden_ability', abilityInfo?.isHidden ?? false);
   }
 
-  const [sectionTop, setSectionTop] = useState(53);
-  const previewNodeRef = useRef<HTMLDivElement | null>(null);
-  const previewRef = useCallback((node: HTMLDivElement | null) => {
-    previewNodeRef.current = node;
-  }, []);
-
-  useEffect(() => {
-    const node = previewNodeRef.current;
-    if (!node) return;
-    const update = () => {
-      const style = getComputedStyle(node);
-      const top = parseFloat(style.top) || 0;
-      const marginTop = parseFloat(style.marginTop) || 0;
-      setSectionTop(top + marginTop + node.offsetHeight);
-    };
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
-    update();
-    return () => observer.disconnect();
-  }, []);
-
+  const stickyOffset = useStickyOffset();
 
   const sectionClass = 'space-y-4';
   const sectionTitleClass =
@@ -322,28 +290,29 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
       }}
       className="space-y-8"
     >
-      <FormHeader ref={previewRef}>
-        <PokemonPreview
-          speciesValue={speciesValue}
-          formValue={formValue}
-          nickname={nickname}
-          spriteUrl={spriteUrl}
-          ballSpriteUrl={ballSpriteUrl}
-          pokeBall={pokeBall}
-          isShiny={isShiny}
-          isAlpha={isAlpha}
-          isEvent={isEvent}
-
-          isAvailableForTrade={isAvailableForTrade}
-          locationBoxArt={locationBoxArt}
-          currentLocation={currentLocation}
-          originMark={originMark}
-        />
-      </FormHeader>
+      <PageHeader>
+        <Card className="px-4 py-3">
+          <PokemonPreview
+            speciesValue={speciesValue}
+            formValue={formValue}
+            nickname={nickname}
+            spriteUrl={spriteUrl}
+            ballSpriteUrl={ballSpriteUrl}
+            pokeBall={pokeBall}
+            isShiny={isShiny}
+            isAlpha={isAlpha}
+            isEvent={isEvent}
+            isAvailableForTrade={isAvailableForTrade}
+            locationBoxArt={locationBoxArt}
+            currentLocation={currentLocation}
+            originMark={originMark}
+          />
+        </Card>
+      </PageHeader>
 
       {/* Identity */}
       <div className={sectionClass}>
-        <div className={sectionTitleClass} style={{ top: sectionTop }}>Identity</div>
+        <div className={sectionTitleClass} style={{ top: stickyOffset }}>Identity</div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <form.Field name="species">
@@ -435,7 +404,7 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
 
       {/* Attributes */}
       <div className={sectionClass}>
-        <div className={sectionTitleClass} style={{ top: sectionTop }}>Attributes</div>
+        <div className={sectionTitleClass} style={{ top: stickyOffset }}>Attributes</div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <form.Field name="poke_ball">
@@ -584,7 +553,7 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
 
       {/* Origin */}
       <div className={sectionClass}>
-        <div className={sectionTitleClass} style={{ top: sectionTop }}>Origin</div>
+        <div className={sectionTitleClass} style={{ top: stickyOffset }}>Origin</div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <form.Field name="ot_name">
@@ -635,7 +604,7 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
 
       {/* Location */}
       <div className={sectionClass}>
-        <div className={sectionTitleClass} style={{ top: sectionTop }}>Location</div>
+        <div className={sectionTitleClass} style={{ top: stickyOffset }}>Location</div>
         <div>
           <form.Field name="current_location">
             {(field) => (
@@ -650,7 +619,7 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
 
       {/* Notes */}
       <div className={sectionClass}>
-        <div className={sectionTitleClass} style={{ top: sectionTop }}>Notes</div>
+        <div className={sectionTitleClass} style={{ top: stickyOffset }}>Notes</div>
         <div>
           <form.Field name="notes">
             {(field) => (

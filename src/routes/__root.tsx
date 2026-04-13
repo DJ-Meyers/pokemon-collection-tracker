@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createRootRoute, Link, Outlet, type ErrorComponentProps } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PageLayout } from "../components/layout";
+import { AuthProvider } from "../auth/AuthContext";
 
 function RootErrorComponent({ error }: ErrorComponentProps) {
   return (
@@ -24,9 +25,11 @@ function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <PageLayout>
-        <Outlet />
-      </PageLayout>
+      <AuthProvider>
+        <PageLayout>
+          <Outlet />
+        </PageLayout>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -194,6 +194,12 @@ export function getAllRaw(): Pokemon[] {
   return [...data.pokemon];
 }
 
+export function getById(id: string): Pokemon | undefined {
+  ensureLoaded();
+  const p = data.pokemon.find((p) => p.id === id);
+  return p ? { ...p } : undefined;
+}
+
 export function create(input: CreatePokemon): Pokemon {
   ensureLoaded();
   const now = new Date().toISOString();
