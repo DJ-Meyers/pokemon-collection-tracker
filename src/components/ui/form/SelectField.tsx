@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { assetUrl } from '../../../assetUrl';
 
 export interface SelectOption {
   value: string;
@@ -181,7 +182,7 @@ function ImageSelect({
         <span className="flex items-center gap-2 truncate">
           {selected?.image && (
             <img
-              src={selected.image}
+              src={assetUrl(selected.image)}
               alt=""
               className={'w-5 h-5 flex-shrink-0' + (imageClassName ? ' ' + imageClassName : '')}
               onError={(e) => {
@@ -244,7 +245,7 @@ function ImageSelect({
               >
                 {option.image && (
                   <img
-                    src={option.image}
+                    src={assetUrl(option.image)}
                     alt=""
                     className={'w-5 h-5 flex-shrink-0' + (imageClassName ? ' ' + imageClassName : '')}
                           onError={(e) => {

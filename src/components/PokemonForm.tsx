@@ -7,6 +7,7 @@ import { useCreatePokemon, useUpdatePokemon } from '../api/mutations';
 import { NATURES, LANGUAGES, GENDERS, GAME_LOCATIONS } from '../data/constants';
 import { getSpeciesInfo, getShowdownSpriteUrl, getBallSpriteUrl, type SpeciesInfo } from '../data/pokemon-dex';
 import { Badge, BADGE_ICONS, OriginMarkBadge } from './ui/Badge';
+import { assetUrl } from '../assetUrl';
 import { Card, PageHeader, useStickyOffset } from './layout';
 import { BallSelect } from './ui/form/BallSelect';
 import { LocationSelect } from './ui/form/LocationSelect';
@@ -125,7 +126,7 @@ export function PokemonPreview({
         {locationBoxArt && (
           <div className="flex items-center justify-center w-8 h-8" title={currentLocation ?? ''}>
             <img
-              src={locationBoxArt}
+              src={assetUrl(locationBoxArt)}
               alt={currentLocation ?? ''}
               className="w-7 h-7 rounded object-contain"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}

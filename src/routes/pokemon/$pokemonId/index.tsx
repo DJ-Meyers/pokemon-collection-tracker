@@ -10,6 +10,7 @@ import { Button } from '../../../components/ui/Button';
 import { GAME_LOCATIONS } from '../../../data/constants';
 import { getSpeciesInfo, getShowdownSpriteUrl, getBallSpriteUrl } from '../../../data/pokemon-dex';
 import { useAuth } from '../../../auth/AuthContext';
+import { assetUrl } from '../../../assetUrl';
 
 const pokemonIdParam = z.string().regex(/^[a-z0-9]{4}$/);
 
@@ -206,7 +207,7 @@ function PokemonDetailPage() {
                   {(() => {
                     const game = GAME_LOCATIONS.find((g) => g.name === pokemon.current_location);
                     return game ? (
-                      <img src={game.boxArt} alt="" className="w-5 h-5 rounded object-contain inline-block" />
+                      <img src={assetUrl(game.boxArt)} alt="" className="w-5 h-5 rounded object-contain inline-block" />
                     ) : null;
                   })()}
                   {pokemon.current_location}

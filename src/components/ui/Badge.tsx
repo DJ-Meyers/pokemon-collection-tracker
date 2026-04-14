@@ -1,4 +1,5 @@
 import { getOriginMark } from "../../data/pokemon-dex";
+import { assetUrl } from "../../assetUrl";
 
 interface BadgeProps {
   children?: React.ReactNode;
@@ -58,7 +59,7 @@ export function BadgeIcon({ icon, size = "sm" }: { icon: string; size?: "sm" | "
 
   return (
     <img
-      src={icon}
+      src={assetUrl(icon)}
       alt=""
       className={`${sizeClass}${config.dropShadow ? " drop-shadow" : ""}`}
       style={config.pixelated ? { imageRendering: "pixelated" } : undefined}
@@ -126,7 +127,7 @@ export function OriginMarkBadge({
       title={resolvedTitle}
     >
       {mark.sprite ? (
-        <img src={mark.sprite} alt={mark.label} className={`${iconSize} drop-shadow`} />
+        <img src={assetUrl(mark.sprite)} alt={mark.label} className={`${iconSize} drop-shadow`} />
       ) : (
         <span className={`${textSize} font-bold text-gray-100 leading-none`}>{fallbackText}</span>
       )}

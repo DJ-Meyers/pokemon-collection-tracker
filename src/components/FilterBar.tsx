@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useId } from "react";
+import { assetUrl } from "../assetUrl";
 import { useNavigate } from "@tanstack/react-router";
 import { Route } from "../routes/index";
 
@@ -236,7 +237,7 @@ export function FilterBar() {
                 }`}
                 style={{ width: 36, height: 36 }}
               >
-                <img src={btn.icon} alt={btn.label} className="w-5 h-5" />
+                <img src={assetUrl(btn.icon)} alt={btn.label} className="w-5 h-5" />
               </button>
             ))}
 

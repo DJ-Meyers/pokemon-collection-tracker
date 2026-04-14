@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 
 export default defineConfig({
-  base: "./",
+  base: process.env.GITHUB_ACTIONS ? "/pokemon-collection-tracker/" : "/",
   plugins: [TanStackRouterVite({}), react()],
   server: {
     port: 5173,

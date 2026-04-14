@@ -68,7 +68,7 @@ export async function loadCollection(): Promise<void> {
 
   loadPromise = (async () => {
     try {
-      const res = await fetch("/data/collection.json");
+      const res = await fetch(import.meta.env.BASE_URL + "data/collection.json");
       if (res.ok) {
         const json = await res.json();
         const parsed = collectionDataSchema.safeParse(json);
