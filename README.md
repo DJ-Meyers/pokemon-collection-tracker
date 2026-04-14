@@ -10,12 +10,9 @@ A static site for tracking your Pokemon collection. Runs on GitHub Pages and use
 
 Go to the **Actions** tab on your fork and enable workflows.
 
-### 3. Enable GitHub Pages
+### 3. Deploy
 
-1. Go to **Settings > Pages**
-2. Under **Source**, select **GitHub Actions**
-
-The included workflow builds and deploys the site on each push to `main`.
+Push a commit to `main` (or re-run the workflow from the Actions tab). The deploy workflow automatically enables GitHub Pages and deploys the site.
 
 ### 4. Create a GitHub Personal Access Token
 
