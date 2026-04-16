@@ -5,6 +5,7 @@ import { useCollectionOwner } from "../../api/queries";
 import { useAuth } from "../../auth/AuthContext";
 import { SetupGuide } from "../SetupGuide";
 import { EditNameModal } from "../EditNameModal";
+import { Toaster } from "react-hot-toast";
 import { SaveBar } from "../SaveBar";
 import { hasChanges, subscribe } from "../../store/pendingChanges";
 
@@ -141,6 +142,10 @@ export function PageLayout({ children }: { children: React.ReactNode }) {
           </StickyOffsetContext.Provider>
         </main>
       </div>
+      <Toaster
+        position="bottom-center"
+        containerStyle={{ bottom: showSaveBar ? 64 : 16 }}
+      />
       {showSaveBar && <SaveBar />}
       {showSetup && <SetupGuide onClose={() => setShowSetup(false)} />}
       {showEditName && <EditNameModal onClose={() => setShowEditName(false)} />}

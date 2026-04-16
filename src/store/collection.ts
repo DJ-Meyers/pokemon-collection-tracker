@@ -59,6 +59,18 @@ let data: CollectionData = {
   pokemon: [],
 };
 
+// Tracks the SHA of collection.json at the time we loaded/authenticated,
+// so we can detect if someone else pushed a newer version before we save.
+let baselineSha: string | null = null;
+
+export function getBaselineSha(): string | null {
+  return baselineSha;
+}
+
+export function setBaselineSha(sha: string | null): void {
+  baselineSha = sha;
+}
+
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
 
@@ -240,6 +252,37 @@ export function remove(id: string): void {
   const idx = data.pokemon.findIndex((p) => p.id === id);
   if (idx === -1) throw new Error(`Pokemon ${id} not found`);
   data.pokemon.splice(idx, 1);
+}
+
+export function bulkUpdate(ids: string[], input: UpdatePokemon): Pokemon[] {
+  ensureLoaded();
+  return ids.map((id) => update(id, input));
+}
+
+export function bulkRemove(ids: string[]): Pokemon[] {
+  ensureLoaded();
+  const removed: Pokemon[] = [];
+  for (const id of ids) {
+    const p = getById(id);
+    if (p) {
+      remove(id);
+      removed.push(p);
+    }
+  }
+  return removed;
+}
+
+export function removeByTag(tag: string): Pokemon[] {
+  ensureLoaded();
+  const removed: Pokemon[] = [];
+  data.pokemon = data.pokemon.filter((p) => {
+    if (p.tags?.includes(tag)) {
+      removed.push(p);
+      return false;
+    }
+    return true;
+  });
+  return removed;
 }
 
 // ---- Filter options (replaces /api/pokemon/filters) ----

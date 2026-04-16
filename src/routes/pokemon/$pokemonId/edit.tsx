@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate, notFound } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate, notFound } from '@tanstack/react-router';
 import { z } from 'zod';
 import { usePokemon } from '../../../api/queries';
 import { PokemonForm } from '../../../components/PokemonForm';
 import { LoadingSpinner, NotFound, PageHeader } from '../../../components/layout';
 import { Button } from '../../../components/ui/Button';
+import { getAuthSnapshot, useAuth } from '../../../auth/AuthContext';
 
 const pokemonIdParam = z.string().regex(/^[a-z0-9]{4}$/);
 
@@ -13,6 +14,10 @@ export const Route = createFileRoute('/pokemon/$pokemonId/edit')({
     if (!result.success) {
       throw notFound();
     }
+    const snap = getAuthSnapshot();
+    if (!snap.isLoading && !(snap.user && snap.isOwner)) {
+      throw redirect({ to: '/' });
+    }
   },
   component: PokemonEditPage,
 });
@@ -20,6 +25,8 @@ export const Route = createFileRoute('/pokemon/$pokemonId/edit')({
 function PokemonEditPage() {
   const { pokemonId } = Route.useParams();
   const navigate = useNavigate();
+  const { user, isOwner } = useAuth();
+  const canEdit = !!user && isOwner;
   const { data: pokemon, isLoading, isError } = usePokemon(pokemonId);
 
   function handleCancel() {
@@ -28,6 +35,10 @@ function PokemonEditPage() {
 
   function handleSuccess() {
     navigate({ to: '/pokemon/$pokemonId', params: { pokemonId } });
+  }
+
+  if (!canEdit) {
+    return null;
   }
 
   if (isLoading) {

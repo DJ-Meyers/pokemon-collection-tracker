@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getChanges, getMetaChanges, getChangeSummary, clearChanges, type PendingChange } from "../store/pendingChanges";
 import { getFileContent, commitFile } from "../api/github";
-import { toJSON } from "../store/collection";
+import { toJSON, getBaselineSha, setBaselineSha } from "../store/collection";
 import { Button } from "./ui/Button";
 
 function ChangeItem({ change }: { change: PendingChange }) {
@@ -60,7 +60,7 @@ function ChangeItem({ change }: { change: PendingChange }) {
 }
 
 export function ChangelogModal({ onClose }: { onClose: () => void }) {
-  const { token, repo } = useAuth();
+  const { token, repo, logout } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -85,11 +85,22 @@ export function ChangelogModal({ onClose }: { onClose: () => void }) {
 
     try {
       const filePath = "public/data/collection.json";
-      const { sha } = await getFileContent(token, repo.owner, repo.name, filePath);
+      const { sha: latestSha } = await getFileContent(token, repo.owner, repo.name, filePath);
+
+      const baseline = getBaselineSha();
+      if (baseline && baseline !== latestSha) {
+        setError(
+          "The collection was updated in GitHub since you loaded this page. Reload to pick up the latest changes before saving.",
+        );
+        setIsSaving(false);
+        return;
+      }
+
       const content = toJSON();
       const message = getChangeSummary();
 
-      await commitFile(token, repo.owner, repo.name, filePath, content, sha, message);
+      const commitResult = await commitFile(token, repo.owner, repo.name, filePath, content, latestSha, message);
+      setBaselineSha(commitResult.content.sha);
 
       clearChanges();
       setSuccess(true);
@@ -97,7 +108,11 @@ export function ChangelogModal({ onClose }: { onClose: () => void }) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to save";
       if (msg.includes("401")) {
-        setError("Your GitHub token has expired or been revoked. Please sign out and sign in again.");
+        setError("Your GitHub token has expired or been revoked. Signing you out now.");
+        setTimeout(() => {
+          logout();
+          onClose();
+        }, 1500);
       } else {
         setError(msg);
       }

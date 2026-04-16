@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MutableRefObject } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useStore } from '@tanstack/react-store';
 import type { Pokemon } from '../data/types';
@@ -17,10 +17,14 @@ import { SpeciesTypeahead } from './ui/form/SpeciesTypeahead';
 import { TextField } from './ui/form/TextField';
 import { inputClass, labelClass, errorClass, selectClass } from './ui/form/styles';
 
+export type SubmitMode = 'save' | 'add-another';
+
 interface PokemonFormProps {
   pokemon?: Pokemon;
   formId?: string;
   onSuccess?: () => void;
+  submitModeRef?: MutableRefObject<SubmitMode>;
+  onAddAnother?: (added: { species: string; nickname: string | null }) => void;
 }
 
 interface FormValues {
@@ -172,7 +176,13 @@ function buildDefaultValues(pokemon?: Pokemon): FormValues {
   };
 }
 
-export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
+/** Fields that are preserved when using "Add & Add Another" */
+const STICKY_FIELDS = [
+  'ot_name', 'ot_tid', 'language_tag', 'origin_mark',
+  'current_location', 'poke_ball',
+] as const;
+
+export function PokemonForm({ pokemon, formId, onSuccess, submitModeRef, onAddAnother }: PokemonFormProps) {
   const isEdit = !!pokemon;
   const createMutation = useCreatePokemon();
   const updateMutation = useUpdatePokemon();
@@ -184,6 +194,10 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
   const form = useForm({
     defaultValues: buildDefaultValues(pokemon),
     onSubmit: ({ value }) => {
+      const mode = submitModeRef?.current ?? 'save';
+      // Reset mode back to default after reading
+      if (submitModeRef) submitModeRef.current = 'save';
+
       const result = createPokemonSchema.safeParse(value);
       if (!result.success) {
         setValidationErrors(result.error.issues.map((i) => i.message));
@@ -196,6 +210,19 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
           { id: pokemon.id, data: result.data },
           { onSuccess },
         );
+      } else if (mode === 'add-another') {
+        createMutation.mutate(result.data, {
+          onSuccess: () => {
+            // Build new defaults, keeping sticky fields from current values
+            const fresh = buildDefaultValues();
+            for (const key of STICKY_FIELDS) {
+              (fresh as any)[key] = value[key];
+            }
+            form.reset(fresh);
+            setTagsTouched(false);
+            onAddAnother?.({ species: value.species, nickname: value.nickname });
+          },
+        });
       } else {
         createMutation.mutate(result.data, { onSuccess });
       }
@@ -655,6 +682,7 @@ export function PokemonForm({ pokemon, formId, onSuccess }: PokemonFormProps) {
           </p>
         </div>
       )}
+
     </form>
   );
 }

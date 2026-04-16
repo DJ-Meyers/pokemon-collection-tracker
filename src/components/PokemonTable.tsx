@@ -1,4 +1,5 @@
 import type React from "react";
+import { useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Pokemon } from "../data/types";
 import { Badge, BADGE_ICONS } from "./ui/Badge";
@@ -12,6 +13,9 @@ interface PokemonTableProps {
   sortOrder: "asc" | "desc";
   hasFilters?: boolean;
   onClearFilters?: () => void;
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
 }
 
 interface Column {
@@ -45,8 +49,47 @@ export function PokemonTable({
   sortOrder,
   hasFilters,
   onClearFilters,
+  selectable,
+  selectedIds,
+  onSelectionChange,
 }: PokemonTableProps) {
   const navigate = useNavigate({ from: "/" });
+  const lastClickedIdRef = useRef<string | null>(null);
+
+  const allSelected = selectable && pokemon.length > 0 && pokemon.every((p) => selectedIds?.has(p.id));
+  const someSelected = selectable && !allSelected && pokemon.some((p) => selectedIds?.has(p.id));
+
+  const handleSelectAll = () => {
+    if (!onSelectionChange) return;
+    if (allSelected) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(pokemon.map((p) => p.id)));
+    }
+  };
+
+  const handleRowSelect = (id: string, e: React.MouseEvent) => {
+    if (!onSelectionChange || !selectedIds) return;
+    const next = new Set(selectedIds);
+
+    if (e.shiftKey && lastClickedIdRef.current) {
+      const lastIdx = pokemon.findIndex((p) => p.id === lastClickedIdRef.current);
+      const curIdx = pokemon.findIndex((p) => p.id === id);
+      if (lastIdx !== -1 && curIdx !== -1) {
+        const [start, end] = lastIdx < curIdx ? [lastIdx, curIdx] : [curIdx, lastIdx];
+        for (let i = start; i <= end; i++) {
+          next.add(pokemon[i].id);
+        }
+      }
+    } else if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+
+    lastClickedIdRef.current = id;
+    onSelectionChange(next);
+  };
 
   const getSortKey = (col: Column) => col.sortKey ?? col.key;
 
@@ -114,6 +157,17 @@ export function PokemonTable({
       <table className="min-w-full divide-y divide-gray-200 bg-white">
         <thead>
           <tr>
+            {selectable && (
+              <th className="bg-gray-50 px-3 py-2 border-b border-gray-200 w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = !!someSelected; }}
+                  onChange={handleSelectAll}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </th>
+            )}
             {COLUMNS.map((col) => (
               <th
                 key={col.key}
@@ -147,19 +201,41 @@ export function PokemonTable({
           {pokemon.map((p) => (
             <tr
               key={p.id}
-              className="transition-colors cursor-pointer hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-500"
+              className={`transition-colors cursor-pointer hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-500 ${selectedIds?.has(p.id) ? "bg-blue-50 hover:bg-blue-100" : ""}`}
               tabIndex={0}
-              role="link"
-              onClick={() =>
-                navigate({ to: '/pokemon/$pokemonId', params: { pokemonId: p.id } })
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
+              role={selectable && selectedIds && selectedIds.size > 0 ? "row" : "link"}
+              onClick={(e) => {
+                if (selectable && selectedIds && selectedIds.size > 0) {
+                  handleRowSelect(p.id, e);
+                } else {
                   navigate({ to: '/pokemon/$pokemonId', params: { pokemonId: p.id } });
                 }
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  if (selectable && selectedIds && selectedIds.size > 0) {
+                    handleRowSelect(p.id, e as unknown as React.MouseEvent);
+                  } else {
+                    navigate({ to: '/pokemon/$pokemonId', params: { pokemonId: p.id } });
+                  }
+                }
+              }}
             >
+              {selectable && (
+                <td className="px-3 py-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds?.has(p.id) ?? false}
+                    onChange={() => {}}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRowSelect(p.id, e);
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </td>
+              )}
               <td className="pl-3 pr-1 py-0">
                 <Sprite dexNumber={p.dex_number} shiny={p.is_shiny} size={48} />
               </td>

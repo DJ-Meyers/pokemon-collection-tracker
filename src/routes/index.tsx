@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { usePokemonList } from "../api/queries";
+import { useDeleteByTag } from "../api/mutations";
 import { PokemonTable } from "../components/PokemonTable";
+import { BulkActionBar } from "../components/BulkActionBar";
 import { FilterBar } from "../components/FilterBar";
 import { PageHeader } from "../components/layout";
 import { Button } from "../components/ui/Button";
@@ -75,13 +77,43 @@ function hasActiveFilters(search: CollectionSearch): boolean {
   );
 }
 
+function SampleDataBanner({ sampleCount, onClear, isPending }: { sampleCount: number; onClear: () => void; isPending: boolean }) {
+  return (
+    <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+      <p className="text-sm text-amber-800">
+        Your collection contains <strong>{sampleCount}</strong> sample{" "}
+        {sampleCount === 1 ? "Pokemon" : "Pokemon"}. Remove them when
+        you're ready to start fresh.
+      </p>
+      <button
+        onClick={onClear}
+        disabled={isPending}
+        className="ml-4 shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+      >
+        {isPending ? "Removing..." : "Clear sample data"}
+      </button>
+    </div>
+  );
+}
+
 function CollectionPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
   const { isOwner, user } = useAuth();
   const canEdit = !!user && isOwner;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const apiFilters = useMemo(() => toApiFilters(search), [search]);
   const { data: pokemon = [], isLoading } = usePokemonList(apiFilters);
+
+  // Clear selection when filters change
+  useEffect(() => setSelectedIds(new Set()), [apiFilters]);
+  const allPokemon = usePokemonList({});
+  const deleteByTag = useDeleteByTag();
+
+  const sampleCount = useMemo(
+    () => (allPokemon.data ?? []).filter((p) => p.tags?.includes("sample")).length,
+    [allPokemon.data],
+  );
 
   const filtersActive = hasActiveFilters(search);
 
@@ -106,6 +138,14 @@ function CollectionPage() {
         <FilterBar />
       </PageHeader>
 
+      {canEdit && sampleCount > 0 && (
+        <SampleDataBanner
+          sampleCount={sampleCount}
+          onClear={() => deleteByTag.mutate("sample")}
+          isPending={deleteByTag.isPending}
+        />
+      )}
+
       <PokemonTable
         pokemon={pokemon}
         isLoading={isLoading}
@@ -113,7 +153,20 @@ function CollectionPage() {
         sortOrder={search.sortOrder ?? "asc"}
         hasFilters={filtersActive}
         onClearFilters={clearAllFilters}
+        selectable={canEdit}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
+
+      {canEdit && selectedIds.size > 0 && (
+        <BulkActionBar
+          selectedIds={selectedIds}
+          allVisibleIds={pokemon.map((p) => p.id)}
+          pokemon={pokemon}
+          onSelectionChange={setSelectedIds}
+          onClearSelection={() => setSelectedIds(new Set())}
+        />
+      )}
     </div>
   );
 }

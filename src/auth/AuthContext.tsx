@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { getUser, getRepoPermissions } from "../api/github";
+import { getUser, getRepoPermissions, getFileContent } from "../api/github";
+import { setBaselineSha } from "../store/collection";
 
 interface RepoInfo {
   owner: string;
@@ -19,19 +20,33 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+// PAT is stored in localStorage for session persistence on a static host.
+// Any XSS in this app would exfiltrate the token + grant repo-write.
+// Mitigation: CSP meta tag in index.html + never render user-controlled HTML.
 const TOKEN_KEY = "github_pat";
 
-function detectRepo(): RepoInfo | null {
-  const { hostname, pathname } = window.location;
+const hasStoredToken = !!localStorage.getItem(TOKEN_KEY);
+let authSnapshot = { user: null as { login: string; avatar_url: string } | null, isOwner: false, isLoading: hasStoredToken };
 
-  // GitHub Pages: <username>.github.io/<repo>/
+export function getAuthSnapshot() {
+  return authSnapshot;
+}
+
+function detectRepo(): RepoInfo | null {
+  // 1. Build-time env override (CNAME / custom domain deploys)
+  const envOwner = import.meta.env.VITE_REPO_OWNER;
+  const envName = import.meta.env.VITE_REPO_NAME;
+  if (envOwner && envName) {
+    return { owner: envOwner, name: envName };
+  }
+
+  // 2. GitHub Pages subpath: <username>.github.io/<repo>/
+  const { hostname, pathname } = window.location;
   const ghPagesMatch = hostname.match(/^(.+)\.github\.io$/);
   if (ghPagesMatch) {
     const owner = ghPagesMatch[1];
     const repoName = pathname.split("/").filter(Boolean)[0];
-    if (repoName) {
-      return { owner, name: repoName };
-    }
+    if (repoName) return { owner, name: repoName };
   }
 
   return null;
@@ -44,12 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<{ login: string; avatar_url: string } | null>(null);
   const [repo] = useState<RepoInfo | null>(() => detectRepo());
   const [isOwner, setIsOwner] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY));
   const [error, setError] = useState<string | null>(null);
 
   const validateToken = useCallback(
     async (t: string) => {
-      setIsLoading(true);
       setError(null);
       try {
         const githubUser = await getUser(t);
@@ -58,9 +72,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (repo) {
           const perms = await getRepoPermissions(t, repo.owner, repo.name);
           setIsOwner(perms.push);
-        } else {
-          // No repo detected (local dev) — treat as owner if token is valid
+
+          if (perms.push) {
+            try {
+              const fileData = await getFileContent(t, repo.owner, repo.name, "public/data/collection.json");
+              setBaselineSha(fileData.sha);
+            } catch {
+              // 404 (file doesn't exist yet) or network error — skip baseline capture
+            }
+          }
+        } else if (import.meta.env.DEV) {
           setIsOwner(true);
+        } else {
+          setIsOwner(false);
+          setError(
+            "Could not detect the GitHub repository for this deployment. Set VITE_REPO_OWNER and VITE_REPO_NAME at build time to enable editing.",
+          );
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Token validation failed");
@@ -94,7 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setIsOwner(false);
     setError(null);
+    setBaselineSha(null);
   }, []);
+
+  useEffect(() => {
+    authSnapshot = { user, isOwner, isLoading };
+  }, [user, isOwner, isLoading]);
 
   return (
     <AuthContext.Provider

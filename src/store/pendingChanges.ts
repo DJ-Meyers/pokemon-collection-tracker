@@ -13,6 +13,14 @@ export interface MetaChange {
   to: string;
 }
 
+function sanitizeForCommitMessage(s: string): string {
+  return s
+    .replace(/[#@]/g, "")
+    .replace(/\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b/gi, "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 let changes: PendingChange[] = [];
 let metaChanges: MetaChange[] = [];
 let listeners: Array<() => void> = [];
@@ -50,6 +58,23 @@ export function addMetaChange(change: MetaChange): void {
   notify();
 }
 
+/** Compare two Pokemon by value, ignoring updated_at which changes on every edit. */
+function pokemonEqual(a: Pokemon, b: Pokemon): boolean {
+  const aKeys = Object.keys(a).filter(k => k !== "updated_at");
+  const bKeys = Object.keys(b).filter(k => k !== "updated_at");
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys as (keyof Pokemon)[]) {
+    const aVal = a[key];
+    const bVal = b[key];
+    if (Array.isArray(aVal) && Array.isArray(bVal)) {
+      if (aVal.length !== bVal.length || aVal.some((v, i) => v !== bVal[i])) return false;
+    } else if (aVal !== bVal) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function addChange(change: PendingChange): void {
   // If updating a pokemon that was just added, merge into a single "add"
   if (change.type === "update") {
@@ -67,6 +92,12 @@ export function addChange(change: PendingChange): void {
       (c) => c.type === "update" && c.pokemon.id === change.pokemon.id,
     );
     if (existingUpdate) {
+      // If the new state matches the original, the change is a no-op — remove it
+      if (existingUpdate.previous && pokemonEqual(change.pokemon, existingUpdate.previous)) {
+        changes = changes.filter((c) => c !== existingUpdate);
+        notify();
+        return;
+      }
       existingUpdate.pokemon = change.pokemon;
       notify();
       return;
@@ -123,16 +154,16 @@ export function getChangeSummary(): string {
 
   const parts: string[] = [];
   if (metaChanges.length) {
-    parts.push(`changed ${metaChanges.map((c) => c.label).join(", ")}`);
+    parts.push(`changed ${metaChanges.map((c) => sanitizeForCommitMessage(c.label)).join(", ")}`);
   }
   if (added.length) {
-    parts.push(`added ${added.map((c) => c.pokemon.nickname ?? c.pokemon.species).join(", ")}`);
+    parts.push(`added ${added.map((c) => sanitizeForCommitMessage(c.pokemon.nickname ?? c.pokemon.species)).join(", ")}`);
   }
   if (updated.length) {
-    parts.push(`updated ${updated.map((c) => c.pokemon.nickname ?? c.pokemon.species).join(", ")}`);
+    parts.push(`updated ${updated.map((c) => sanitizeForCommitMessage(c.pokemon.nickname ?? c.pokemon.species)).join(", ")}`);
   }
   if (deleted.length) {
-    parts.push(`removed ${deleted.map((c) => c.pokemon.nickname ?? c.pokemon.species).join(", ")}`);
+    parts.push(`removed ${deleted.map((c) => sanitizeForCommitMessage(c.pokemon.nickname ?? c.pokemon.species)).join(", ")}`);
   }
   return parts.length ? `Update collection: ${parts.join("; ")}` : "";
 }
